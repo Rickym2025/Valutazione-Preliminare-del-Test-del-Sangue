@@ -27,9 +27,9 @@ Ensure that you have Python 3.8 or above installed on your machine.
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/AK2k30/BLOOD_TEST_ANALYSIS-main.git
+   git clone https://github.com/AK2k30/BLOOD_TEST_ANALYSIS.git
    ```
-
+   
 2. **Install Dependencies:**
    Use the following command to install the required Python packages:
    ```bash
