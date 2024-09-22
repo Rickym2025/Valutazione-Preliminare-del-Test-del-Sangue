@@ -27,8 +27,7 @@ Ensure that you have Python 3.8 or above installed on your machine.
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/your-username/medical-report-analysis.git
-   cd WINGIFY
+   git clone https://github.com/AK2k30/BLOOD_TEST_ANALYSIS-main.git
    ```
 
 2. **Install Dependencies:**
@@ -40,14 +39,13 @@ Ensure that you have Python 3.8 or above installed on your machine.
 3. **Environment Variables:**
    Create a `.env` file in the root directory of the project and add your environment variables:
    ```plaintext
-   GOOGLE_API_KEY='your-google-api-key'
-   SERPER_API_KEY='your-serper-api-key'
+   GEMINI_API_KEY='your_gemini_api_key'
    ```
 
 4. **Run the Application:**
    Launch the Streamlit application by running the following command:
    ```bash
-   streamlit run app.py
+   streamlit run main.py
    ```
 
 5. **Access the App:**
@@ -82,12 +80,6 @@ medical-report-analysis/
 └── LICENSE              # License for the project
 ```
 
-# Video
-   Here is the video of the screen recording of how the project works.
-   [Video Link](https://www.loom.com/share/50a8c8a00be848dfb95242c360c8c5ab?sid=671c76f9-6f62-4263-ba2e-a3556531985c)
-
-   Here is the ScreenShot of the project
-   ![Image](/assets/image.png)
 ## Contributing
 
 Contributions to the project are welcome! If you have ideas for improvement or new features, please feel free to submit a Pull Request. Before contributing, please ensure that your code adheres to the existing code style and passes all tests.
