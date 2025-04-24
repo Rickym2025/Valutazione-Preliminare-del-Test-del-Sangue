@@ -164,7 +164,7 @@ def estrai_testo_da_pdf(pdf_file_path):
 def main():
     # ... (tutto il codice della funzione main rimane esattamente come nella versione precedente) ...
     # --- IMMAGINE DI INTESTAZIONE ---
-    header_image_url = "https://cdn.leonardo.ai/users/efef8ea0-d41a-4914-8f6f-1d8591a11f28/generations/5c2a4da3-bea8-4549-ab77-6dd0846b73d1/Leonardo_Phoenix_10_a_highly_detailed_and_hyperrealistic_cinem_0.jpg"
+    header_image_url = "https://cdn.leonardo.ai/users/efef8ea0-d41a-4914-8f6f-1d8591a11f28/generations/dbcb618a-0840-46bb-8129-bdeeed315bf5/Leonardo_Phoenix_10_a_highly_detailed_surreal_and_vibrant_cine_0.jpg"
     try:
         st.image(header_image_url, use_container_width=True)
     except Exception as img_err:
