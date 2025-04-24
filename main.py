@@ -10,7 +10,7 @@ import time
 
 # --- Configurazione Pagina Streamlit ---
 st.set_page_config(
-    page_title="Analizzatore Referti Medici IA",
+    page_title="Valutazione Preliminare Analisi Del Sangue IA",
     page_icon="⚕️",  # Icona medica
     layout="wide"
 )
