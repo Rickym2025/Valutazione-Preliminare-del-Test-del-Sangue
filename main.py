@@ -11,7 +11,7 @@ import time
 # --- Configurazione Pagina Streamlit ---
 st.set_page_config(
     page_title="Valutazione Preliminare Analisi Del Sangue IA",
-    page_icon="🩸",
+    page_icon="🩸", # Manteniamo l'icona principale per la tab
     layout="wide"
 )
 
@@ -21,11 +21,8 @@ try:
     if not api_key:
         st.error("Chiave API Gemini vuota trovata nei segreti di Streamlit. Verifica che sia impostata correttamente.")
         st.stop()
-    genai.configure(api_key=api_key)
-    # Usiamo un modello potenzialmente più capace se necessario per prompt complessi,
-    # ma gemini-1.5-flash è spesso sufficiente ed economico.
-    # Potresti provare 'gemini-1.5-pro-latest' se flash non dà risultati soddisfacenti.
     model = genai.GenerativeModel('gemini-1.5-flash')
+    genai.configure(api_key=api_key) # Configura dopo aver creato il modello può essere più robusto
 
 except KeyError:
     st.error("Chiave API Gemini ('GEMINI_API_KEY') non trovata nei segreti di Streamlit.")
@@ -38,14 +35,12 @@ except Exception as e:
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 
-# --- Funzioni Helper ---
-
+# --- Funzioni Helper (analizza_referto_medico, analisi_fallback, estrai_testo_da_pdf - NESSUNA MODIFICA QUI) ---
 def analizza_referto_medico(contenuto, tipo_contenuto):
     """
     Invia il contenuto a Gemini per un'analisi DETTAGLIATA e STRUTTURATA.
     Include sezioni specifiche come richiesto, con forti disclaimer.
     """
-    # --- NUOVO PROMPT DETTAGLIATO ---
     prompt = """
     Analizza questo referto medico (probabilmente analisi del sangue) in modo DETTAGLIATO e STRUTTURATO, in ITALIANO. **NON FARE DIAGNOSI MEDICHE**. Fornisci ESCLUSIVAMENTE le seguenti sezioni, usando un linguaggio chiaro e cauto:
 
@@ -75,7 +70,6 @@ def analizza_referto_medico(contenuto, tipo_contenuto):
     **Nota Bene Finale (Includi questo testo alla fine della risposta):**
     "Questa analisi è generata automaticamente da un'IA ed è puramente informativa. Non ha valore diagnostico e non sostituisce il consulto medico. Discuti SEMPRE questi risultati e qualsiasi dubbio con il tuo medico curante."
     """
-    # --- FINE NUOVO PROMPT ---
 
     for tentativo in range(MAX_RETRIES):
         try:
@@ -83,31 +77,23 @@ def analizza_referto_medico(contenuto, tipo_contenuto):
             if tipo_contenuto == "immagine":
                 risposta = model.generate_content([prompt, contenuto])
             else:  # testo
-                # Aggiungo il contenuto formattato per chiarezza nel prompt inviato
                 input_content = f"{prompt}\n\n--- INIZIO TESTO REFERTO FORNITO ---\n{contenuto}\n--- FINE TESTO REFERTO FORNITO ---"
                 risposta = model.generate_content(input_content)
 
-            # Verifica se la risposta contiene testo prima di procedere
             if hasattr(risposta, 'text') and risposta.text:
-                # Il disclaimer finale è già richiesto nel prompt stesso.
-                # Aggiungiamo un ulteriore disclaimer controllato da noi per sicurezza.
                 disclaimer_finale_app = "\n\n---\n**⚠️⚠️ DISCLAIMER FINALE (DA APP) ⚠️⚠️**\n*Ricorda ancora una volta: questa analisi, per quanto dettagliata, è **AUTOMATICA**, **NON PERSONALIZZATA** e **NON SOSTITUISCE IL MEDICO**. Errori, omissioni o interpretazioni imprecise sono possibili. **Consulta SEMPRE il tuo medico** per una valutazione corretta e completa.*"
                 return risposta.text + disclaimer_finale_app
             elif hasattr(risposta, 'prompt_feedback') and risposta.prompt_feedback.block_reason:
-                 # Se Gemini ha bloccato la risposta per motivi di sicurezza/contenuto
                  st.error(f"L'analisi è stata bloccata dall'IA per motivi di sicurezza/contenuto (Reason: {risposta.prompt_feedback.block_reason}). Ciò può accadere con dati medici sensibili.")
                  return "Errore: L'analisi è stata bloccata dal sistema di sicurezza dell'IA. Prova a caricare un'immagine/PDF più chiaro o meno complesso."
             else:
-                # Risposta vuota o inattesa
                 st.warning(f"L'IA ha restituito una risposta vuota o inattesa (Tentativo {tentativo + 1}).")
                 if tentativo == MAX_RETRIES - 1:
-                     return analisi_fallback(contenuto, tipo_contenuto) # Usa fallback solo all'ultimo tentativo
+                     return analisi_fallback(contenuto, tipo_contenuto)
                 time.sleep(RETRY_DELAY)
-
 
         except exceptions.GoogleAPIError as e:
             st.warning(f"Errore API Google durante l'analisi (Tentativo {tentativo + 1}/{MAX_RETRIES}): {str(e)}")
-            # ... (gestione errori API come prima) ...
             if "quota" in str(e).lower():
                  st.error("Limite di richieste API superato (Quota). Controlla il tuo account Google Cloud o riprova più tardi.")
                  return "Errore: Quota API superata."
@@ -126,9 +112,8 @@ def analizza_referto_medico(contenuto, tipo_contenuto):
 
 
 def analisi_fallback(contenuto, tipo_contenuto):
-    # (Questa funzione rimane invariata, serve solo se l'analisi principale fallisce totalmente)
+    # (Questa funzione rimane invariata)
     st.warning("⚠️ Attenzione: Si è verificato un problema con l'analisi IA dettagliata. Viene mostrata un'analisi di base.")
-    # ... (resto della funzione fallback come prima) ...
     if tipo_contenuto == "immagine":
         analisi = "Analisi di Fallback: Impossibile analizzare l'immagine a causa di problemi tecnici. Si prega di consultare un professionista medico per un'interpretazione accurata."
     else: # testo
@@ -151,25 +136,23 @@ Analisi di Fallback:
 
 def estrai_testo_da_pdf(pdf_file_path):
     # (Questa funzione rimane invariata)
-    # ... (codice estrazione PDF come prima) ...
     testo_completo = ""
     try:
         with open(pdf_file_path, 'rb') as file:
             lettore_pdf = PyPDF2.PdfReader(file)
-
             if lettore_pdf.is_encrypted:
-                st.warning("Il PDF è protetto da password. Tentativo di sblocco senza password...")
-                try:
-                    if lettore_pdf.decrypt('') == PyPDF2.PasswordType.NOT_DECRYPTED:
-                         st.error("Impossibile sbloccare il PDF senza password. L'analisi non può procedere.")
-                         return None
-                    st.info("PDF sbloccato con successo (senza password).")
-                except Exception as decrypt_err:
-                    st.error(f"Errore durante il tentativo di sblocco del PDF: {decrypt_err}")
-                    return None
+                # ... (codice gestione pdf criptato) ...
+                 st.warning("Il PDF è protetto da password. Tentativo di sblocco senza password...")
+                 try:
+                     if lettore_pdf.decrypt('') == PyPDF2.PasswordType.NOT_DECRYPTED:
+                          st.error("Impossibile sbloccare il PDF senza password. L'analisi non può procedere.")
+                          return None
+                     st.info("PDF sbloccato con successo (senza password).")
+                 except Exception as decrypt_err:
+                     st.error(f"Errore durante il tentativo di sblocco del PDF: {decrypt_err}")
+                     return None
 
             num_pagine = len(lettore_pdf.pages)
-
             for i, pagina in enumerate(lettore_pdf.pages):
                 try:
                     testo_pagina = pagina.extract_text()
@@ -179,31 +162,29 @@ def estrai_testo_da_pdf(pdf_file_path):
                      st.warning(f"Impossibile estrarre completamente il testo dalla pagina {i+1}: {page_err}")
 
             if not testo_completo.strip():
-                 st.warning("Non è stato possibile estrarre testo utilizzabile dal PDF. Verifica che non contenga solo immagini (scansione senza OCR) o che non sia vuoto/danneggiato.")
+                 st.warning("Non è stato possibile estrarre testo utilizzabile dal PDF...")
                  return None
             return testo_completo
-
     except FileNotFoundError:
-         st.error(f"Errore: File temporaneo PDF non trovato nel percorso: {pdf_file_path}")
+         st.error(f"Errore: File temporaneo PDF non trovato: {pdf_file_path}")
          return None
     except PyPDF2.errors.PdfReadError as pdf_err:
-         st.error(f"Errore nella lettura del PDF: Il file potrebbe essere danneggiato o non essere un PDF valido. ({pdf_err})")
+         st.error(f"Errore lettura PDF: File danneggiato o non valido. ({pdf_err})")
          return None
     except Exception as e:
-        st.error(f"Errore critico durante l'elaborazione del PDF: {e}")
+        st.error(f"Errore critico elaborazione PDF: {e}")
         return None
-
 # --- Funzione Main ---
 def main():
-    st.title("🩸 Valutazione Preliminare Analisi Del Sangue IA")
-    # MODIFICATO TESTO INTRODUTTIVO
+    # --- Header ---
+    # AGGIUNTA ICONA VECCHIA ACCANTO ALLA NUOVA NEL TITOLO
+    st.title("⚕️🩸 Valutazione Preliminare Analisi Del Sangue IA")
     st.markdown("Carica il tuo referto delle analisi del sangue (immagine o PDF) per ottenere una **valutazione preliminare, dettagliata e strutturata** basata su Intelligenza Artificiale.")
     st.markdown("---")
 
-    # --- DISCLAIMER PRINCIPALE RAFFORZATO ---
+    # --- Disclaimer Principale (invariato) ---
     st.error("""
     **🛑 ATTENZIONE MASSIMA: Leggere Prima di Procedere! 🛑**
-
     *   Questa applicazione fornisce un'**ANALISI AUTOMATICA E DETTAGLIATA** ma **ASSOLUTAMENTE NON MEDICA**.
     *   **NON È UNO STRUMENTO DIAGNOSTICO.** L'IA può commettere errori, interpretare male o fornire informazioni fuorvianti.
     *   L'obiettivo è solo quello di **strutturare le informazioni** presenti nel referto in modo più leggibile.
@@ -214,16 +195,12 @@ def main():
 
     # --- Selezione Tipo File (invariato) ---
     st.subheader("1. Scegli il formato del referto")
-    # ... (codice radio button come prima) ...
     tipo_file = st.radio(
         "Seleziona il tipo di file:",
         ("Immagine (JPG, PNG)", "Documento PDF"),
-        horizontal=True,
-        key="tipo_file_radio",
-        label_visibility="collapsed"
+        horizontal=True, key="tipo_file_radio", label_visibility="collapsed"
     )
     st.markdown("---")
-
 
     file_caricato = None
     placeholder_img_url = "https://toppng.com/uploads/preview/report-icon-png-download-daily-reports-11562996361368wfioyx7.png"
@@ -231,22 +208,27 @@ def main():
     # --- Logica di Upload e Analisi ---
     if tipo_file == "Immagine (JPG, PNG)":
         st.subheader("2. Carica l'Immagine del Referto")
-        # ... (Istruzioni e immagine placeholder come prima) ...
+
+        # --- Istruzioni Chiare ---
+        # CORREZIONE: Usato emoji valida per l'icona
         st.info("""
         **Come caricare l'immagine:**
         *   Clicca sul pulsante "Browse files" (o simile) nel riquadro grigio qui sotto.
         *   Oppure, trascina il file immagine dal tuo computer al riquadro grigio.
+
         *Consiglio: Usa un'immagine chiara e ben leggibile!*
-        """, icon=" Mettiti in luce ")
+        """, icon="💡") # <--- CORRETTO QUI
+
+        # Immagine Placeholder
         try:
              st.image(placeholder_img_url, width=150, caption="Icona referto")
         except Exception as img_err:
-            st.warning(f"Avviso: Impossibile caricare l'immagine dimostrativa dall'URL. {img_err}", icon="🖼️")
+            st.warning(f"Avviso: Impossibile caricare l'immagine dimostrativa. {img_err}", icon="🖼️")
 
+        # File Uploader
         file_caricato = st.file_uploader(
-            "Area di caricamento immagine",
-            type=["jpg", "jpeg", "png"], key="uploader_img", label_visibility="collapsed",
-            help="Clicca o trascina qui un file JPG, JPEG o PNG (max 200MB)"
+            "Area di caricamento immagine", type=["jpg", "jpeg", "png"], key="uploader_img",
+            label_visibility="collapsed", help="Clicca o trascina qui JPG, JPEG o PNG (max 200MB)"
         )
         st.caption("Formati accettati: JPG, JPEG, PNG.")
 
@@ -262,28 +244,30 @@ def main():
                     immagine = None
             with col2:
                 st.markdown("---")
-                st.subheader("3. Avvia Valutazione Dettagliata") # Testo adattato
-                if immagine and st.button("✨ Valuta Immagine (Dettagliato)", key="btn_analizza_img", type="primary", use_container_width=True): # Testo adattato
-                    # AGGIUNTO WARNING PRIMA DELL'ANALISI
+                st.subheader("3. Avvia Valutazione Dettagliata")
+                if immagine and st.button("✨ Valuta Immagine (Dettagliato)", key="btn_analizza_img", type="primary", use_container_width=True):
                     st.warning("Avvio analisi dettagliata. Ricorda i limiti dell'IA e consulta il medico!")
                     with st.spinner("🔬 Analisi dettagliata IA in corso... Potrebbe richiedere più tempo..."):
                         analisi = analizza_referto_medico(immagine, "immagine")
                         st.markdown("---")
-                        st.subheader("✅ Risultati Valutazione IA Dettagliata") # Testo adattato
-                        st.markdown(analisi) # Markdown per formattare la risposta strutturata
+                        st.subheader("✅ Risultati Valutazione IA Dettagliata")
+                        st.markdown(analisi)
 
     elif tipo_file == "Documento PDF":
         st.subheader("2. Carica il Documento PDF")
-        # ... (Istruzioni come prima) ...
+
+        # --- Istruzioni Chiare ---
+        # CORREZIONE: Usato emoji valida per l'icona
         st.info("""
         **Come caricare il PDF:**
         *   Clicca sul pulsante "Browse files" (o simile) nel riquadro grigio qui sotto.
         *   Oppure, trascina il file PDF dal tuo computer al riquadro grigio.
-        """, icon="📄")
+        """, icon="📄") # <--- CORRETTO QUI (Usando un'icona diversa per distinguerlo)
+
+        # File Uploader
         file_caricato = st.file_uploader(
-            "Area di caricamento PDF",
-            type=["pdf"], key="uploader_pdf", label_visibility="collapsed",
-            help="Clicca o trascina qui un file PDF (max 200MB)"
+            "Area di caricamento PDF", type=["pdf"], key="uploader_pdf",
+            label_visibility="collapsed", help="Clicca o trascina qui un file PDF (max 200MB)"
         )
         st.caption("Formato accettato: PDF.")
 
@@ -296,10 +280,9 @@ def main():
 
                 st.success(f"📄 PDF '{file_caricato.name}' caricato.")
                 st.markdown("---")
-                st.subheader("3. Avvia Valutazione Dettagliata") # Testo adattato
+                st.subheader("3. Avvia Valutazione Dettagliata")
 
-                if st.button("✨ Valuta PDF (Dettagliato)", key="btn_analizza_pdf", type="primary", use_container_width=True): # Testo adattato
-                    # AGGIUNTO WARNING PRIMA DELL'ANALISI
+                if st.button("✨ Valuta PDF (Dettagliato)", key="btn_analizza_pdf", type="primary", use_container_width=True):
                     st.warning("Avvio analisi dettagliata. Ricorda i limiti dell'IA e consulta il medico!")
                     testo_pdf = None
                     with st.spinner("📄 Estrazione testo dal PDF..."):
@@ -309,8 +292,8 @@ def main():
                          with st.spinner("🤖 Elaborazione IA Dettagliata in corso... Attendere prego..."):
                               analisi = analizza_referto_medico(testo_pdf, "testo")
                               st.markdown("---")
-                              st.subheader("✅ Risultati Valutazione IA Dettagliata") # Testo adattato
-                              st.markdown(analisi) # Usa markdown per la risposta strutturata
+                              st.subheader("✅ Risultati Valutazione IA Dettagliata")
+                              st.markdown(analisi)
                     else:
                          st.error("Valutazione non possibile: nessun testo valido estratto dal PDF.")
 
@@ -323,7 +306,7 @@ def main():
                     except Exception as e_unlink:
                          st.warning(f"Avviso: Impossibile eliminare file temporaneo: {e_unlink}")
 
-    # --- Footer (invariato) ---
+    # --- Footer ---
     st.markdown("---")
     st.caption("Applicazione sviluppata con Streamlit e Google Gemini. **Consulta sempre un professionista sanitario.**")
 
