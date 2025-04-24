@@ -177,7 +177,7 @@ def main():
 
     # --- IMMAGINE DI INTESTAZIONE ---
     # NUOVO URL INTESTAZIONE
-    header_image_url = "https://ideogram.ai/g/hr6QDSwZTSGahlogjJCt1g/0"                        # HEADER IMAGE
+    header_image_url = "https://ideogram.ai/g/hr6QDSwZTSGahlogjJCt1g/3"                        # HEADER IMAGE
     try:
         st.image(header_image_url, use_container_width=True)
     except Exception as img_err:
