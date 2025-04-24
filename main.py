@@ -177,7 +177,7 @@ def main():
 
     # --- IMMAGINE DI INTESTAZIONE ---
     # NUOVO URL INTESTAZIONE
-    header_image_url = "https://img.healthtech360.it/wp-content/uploads/2024/02/intelligenza-artificiale-in-medicina-di-Google-1280x720.jpg"
+    header_image_url = "https://ideogram.ai/g/hr6QDSwZTSGahlogjJCt1g/0"                        # HEADER IMAGE
     try:
         st.image(header_image_url, use_container_width=True)
     except Exception as img_err:
@@ -303,7 +303,7 @@ def main():
 
     # --- IMMAGINE DI PIÈ DI PAGINA ---
     # NUOVO URL PIÈ DI PAGINA
-    footer_image_url = "https://www.cdi.it/wp-content/uploads/2021/08/shutterstock_1825232600-800x450-1.jpg"
+    footer_image_url = "https://cdn.leonardo.ai/users/efef8ea0-d41a-4914-8f6f-1d8591a11f28/generations/1cf09cf6-3b12-4575-82e5-7350966327b5/Leonardo_Phoenix_10_a_mesmerizing_and_vibrant_cinematic_photo_1.jpg"                   # FOOTER IMAGE
     try:
         # Regola width se necessario per la nuova immagine
         st.image(footer_image_url, width=400) # Leggermente più larga
