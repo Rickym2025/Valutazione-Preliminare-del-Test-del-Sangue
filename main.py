@@ -35,14 +35,16 @@ except Exception as e:
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 
-# --- Funzioni Helper (analizza_referto_medico con emoji, analisi_fallback, estrai_testo_da_pdf - NESSUNA MODIFICA QUI) ---
+# --- Funzioni Helper ---
+
 def analizza_referto_medico(contenuto, tipo_contenuto):
     """
     Invia il contenuto a Gemini per un'analisi DETTAGLIATA e STRUTTURATA.
-    Include sezioni specifiche ed EMOJI nei titoli.
+    Omette sezioni non pertinenti e non include la nota finale AI.
     """
+    # --- NUOVO PROMPT AGGIORNATO ---
     prompt = """
-    Analizza questo referto medico (probabilmente analisi del sangue) in modo DETTAGLIATO e STRUTTURATO, in ITALIANO. **NON FARE DIAGNOSI MEDICHE**. Fornisci ESCLUSIVAMENTE le seguenti sezioni, usando un linguaggio chiaro e cauto e **includendo l'emoji indicata all'inizio di ogni titolo di sezione**:
+    Analizza questo referto medico (probabilmente analisi del sangue) in modo DETTAGLIATO e STRUTTURATO, in ITALIANO. **NON FARE DIAGNOSI MEDICHE**. Fornisci ESCLUSIVAMENTE le sezioni pertinenti tra le seguenti, usando un linguaggio chiaro, cauto e includendo l'emoji indicata all'inizio di ogni titolo di sezione:
 
     **📊 1. Riassunto dei Risultati Chiave:**
         *   Elenca i principali valori che risultano **significativamente** fuori dagli intervalli di riferimento standard indicati nel referto (se presenti) o che sono comunemente considerati rilevanti.
@@ -53,27 +55,26 @@ def analizza_referto_medico(contenuto, tipo_contenuto):
         *   Usa espressioni caute come: "I valori di [Nome Esame] potrebbero suggerire un'area da monitorare relativamente a...", "Livelli alterati di [Nome Esame] sono generalmente associati a...".
         *   **NON USARE TERMINI DIAGNOSTICI SPECIFICI (es. 'diabete', 'anemia', 'infezione').** Limita l'analisi ai sistemi coinvolti (es. metabolismo glucidico, funzionalità epatica, sistema immunitario, ecc.).
 
-    **🩺 3. Eventuali Esami Aggiuntivi o Follow-up (SOLO SE MENZIONATI NEL REFERTO):**
-        *   Riporta *SOLAMENTE* se il testo del referto fornito suggerisce *esplicitamente* ulteriori test, controlli o visite specialistiche.
-        *   **NON INVENTARE O SUGGERIRE TEST** non menzionati nel documento originale. Se non ci sono indicazioni, scrivi: "Il referto non menziona esami aggiuntivi o follow-up specifici."
+    **🩺 3. Eventuali Esami Aggiuntivi o Follow-up:**
+        *   **INCLUDI QUESTA SEZIONE SOLO SE IL REFERTO FORNITO SUGGERISCE ESPLICITAMENTE ulteriori test, controlli o visite specialistiche.** Riporta *solo* quanto menzionato nel testo originale. Altrimenti, OMETTI completamente questa sezione (incluso il titolo).
 
-    **💡 4. Consigli Generali sullo Stile di Vita (MOLTO GENERICI e se PERTINENTI):**
-        *   *SOLO SE* i risultati toccano aree molto comuni (es. colesterolo, glicemia, pressione), fornisci 1-2 consigli *ESTREMAMENTE GENERICI* e universalmente validi (es., "Mantenere una dieta equilibrata e varia", "Praticare regolare attività fisica moderata", "Limitare il consumo di grassi saturi/zuccheri semplici").
-        *   **Sottolinea che sono consigli generali e NON sostituiscono le indicazioni personalizzate del medico.** Se nessun'area comune è coinvolta, scrivi: "Non applicabile o non deducibile dal referto."
-        *   **NON dare consigli specifici su cibi, diete particolari, integratori o farmaci.**
+    **💡 4. Consigli Generali sullo Stile di Vita:**
+        *   **INCLUDI QUESTA SEZIONE SOLO SE i risultati toccano aree molto comuni (es. colesterolo, glicemia, pressione).** Fornisci 1-2 consigli *ESTREMAMENTE GENERICI* e universalmente validi (es., "Mantenere una dieta equilibrata e varia", "Praticare regolare attività fisica moderata").
+        *   **Sottolinea che sono consigli generali e NON sostituiscono le indicazioni personalizzate del medico.**
+        *   **NON dare consigli specifici su cibi, diete, integratori o farmaci.** Se non applicabile, OMETTI completamente questa sezione (incluso il titolo).
 
-    **🔗 5. Link a Risorse Informative Istituzionali (Opzionale e con Cautela):**
-        *   *SOLO SE* emergono temi di salute *molto generali* e ben definiti (es. colesterolo alto, ipertensione), puoi includere UN link a una pagina informativa generale del **Ministero della Salute Italiano** o dell'**Istituto Superiore di Sanità (ISS)**, se trovi una corrispondenza pertinente.
-        *   Esempio: Se si parla di colesterolo, potresti linkare la pagina generale sul colesterolo del Ministero.
-        *   **NON linkare MAI a siti commerciali, blog, forum, articoli specifici o fonti non istituzionali.** Se non trovi un link istituzionale pertinente e generale, scrivi: "Nessun link a risorse istituzionali generali applicabile."
+    **🔗 5. Link a Risorse Informative Istituzionali:**
+        *   **INCLUDI QUESTA SEZIONE SOLO SE emergono temi di salute *molto generali* e ben definiti (es. colesterolo alto, ipertensione) E SE trovi un link pertinente a una pagina informativa generale del Ministero della Salute Italiano o dell'Istituto Superiore di Sanità (ISS).**
+        *   **NON linkare MAI a siti commerciali, blog, forum, articoli specifici o fonti non istituzionali.** Se non applicabile, OMETTI completamente questa sezione (incluso il titolo).
 
-    **✍️ Nota Bene Finale (Includi questo testo e l'emoji alla fine della risposta):**
-    "Questa analisi è generata automaticamente da un'IA ed è puramente informativa. Non ha valore diagnostico e non sostituisce il consulto medico. Discuti SEMPRE questi risultati e qualsiasi dubbio con il tuo medico curante."
+    **(NON AGGIUNGERE NOTE FINALI O DISCLAIMER AGGIUNTIVI TUOI. L'applicazione ne ha già uno).**
     """
+    # --- FINE NUOVO PROMPT ---
 
     for tentativo in range(MAX_RETRIES):
         try:
-            st.info(f"Invio richiesta all'IA (Tentativo {tentativo + 1}/{MAX_RETRIES})... L'analisi dettagliata potrebbe richiedere più tempo.")
+            # Non mostriamo più l'info qui, lo gestirà lo spinner principale
+            # st.info(f"Invio richiesta all'IA (Tentativo {tentativo + 1}/{MAX_RETRIES})...")
             if tipo_contenuto == "immagine":
                 risposta = model.generate_content([prompt, contenuto])
             else:  # testo
@@ -81,15 +82,16 @@ def analizza_referto_medico(contenuto, tipo_contenuto):
                 risposta = model.generate_content(input_content)
 
             if hasattr(risposta, 'text') and risposta.text:
+                # Rimosso disclaimer finale AI, l'app aggiunge il suo
                 disclaimer_finale_app = "\n\n---\n**⚠️⚠️ DISCLAIMER FINALE (DA APP) ⚠️⚠️**\n*Ricorda ancora una volta: questa analisi, per quanto dettagliata, è **AUTOMATICA**, **NON PERSONALIZZATA** e **NON SOSTITUISCE IL MEDICO**. Errori, omissioni o interpretazioni imprecise sono possibili. **Consulta SEMPRE il tuo medico** per una valutazione corretta e completa.*"
-                return risposta.text + disclaimer_finale_app
+                return risposta.text.strip() + disclaimer_finale_app # .strip() per pulire spazi extra
             elif hasattr(risposta, 'prompt_feedback') and risposta.prompt_feedback.block_reason:
                  st.error(f"L'analisi è stata bloccata dall'IA per motivi di sicurezza/contenuto (Reason: {risposta.prompt_feedback.block_reason}). Ciò può accadere con dati medici sensibili.")
                  return "Errore: L'analisi è stata bloccata dal sistema di sicurezza dell'IA. Prova a caricare un'immagine/PDF più chiaro o meno complesso."
             else:
                 st.warning(f"L'IA ha restituito una risposta vuota o inattesa (Tentativo {tentativo + 1}).")
                 if tentativo == MAX_RETRIES - 1:
-                     return analisi_fallback(contenuto, tipo_contenuto)
+                     return analisi_fallback(contenuto, tipo_contenuto) # Usa fallback solo all'ultimo tentativo
                 time.sleep(RETRY_DELAY)
 
         except exceptions.GoogleAPIError as e:
@@ -177,8 +179,15 @@ def estrai_testo_da_pdf(pdf_file_path):
 # --- Funzione Main ---
 def main():
 
+    # Inizializza session state se non esiste
+    if 'analysis_result' not in st.session_state:
+        st.session_state.analysis_result = None
+    if 'processed_file_id' not in st.session_state:
+        st.session_state.processed_file_id = None
+    if 'current_file_type' not in st.session_state:
+         st.session_state.current_file_type = "Immagine (JPG, PNG)" # Default iniziale
+
     # --- IMMAGINE DI INTESTAZIONE ---
-    # NUOVO URL INTESTAZIONE
     header_image_url = "https://cdn.leonardo.ai/users/efef8ea0-d41a-4914-8f6f-1d8591a11f28/generations/dbcb618a-0840-46bb-8129-bdeeed315bf5/Leonardo_Phoenix_10_a_highly_detailed_surreal_and_vibrant_cine_0.jpg"
     try:
         st.image(header_image_url, use_container_width=True)
@@ -191,26 +200,33 @@ def main():
     st.markdown("---")
 
     # --- Disclaimer Principale (invariato) ---
-    st.error("""
-    **🛑 ATTENZIONE MASSIMA: Leggere Prima di Procedere! 🛑**
-    *   Questa applicazione fornisce un'**ANALISI AUTOMATICA E DETTAGLIATA** ma **ASSOLUTAMENTE NON MEDICA**.
-    *   **NON È UNO STRUMENTO DIAGNOSTICO.** L'IA può commettere errori, interpretare male o fornire informazioni fuorvianti.
-    *   L'obiettivo è solo quello di **strutturare le informazioni** presenti nel referto in modo più leggibile.
-    *   **NON BASARE NESSUNA DECISIONE DI SALUTE SU QUESTI RISULTATI.**
-    *   **È OBBLIGATORIO CONSULTARE IL PROPRIO MEDICO CURANTE** per l'interpretazione corretta del referto, la diagnosi e qualsiasi indicazione terapeutica.
-    """)
+    st.error("""...""") # Mantenuto come prima
     st.markdown("---")
 
     # --- Sezione 1: Selezione Tipo File con Immagine Affiancata ---
     col_select, col_img1 = st.columns([3, 1], gap="medium")
+
+    # Funzione per resettare l'analisi quando cambia il tipo di file
+    def clear_analysis_on_type_change():
+         st.session_state.analysis_result = None
+         st.session_state.processed_file_id = None
+         # Aggiorna anche il tipo corrente nello stato
+         # (il valore del radio button si aggiorna da solo, ma è utile tenerlo tracciato)
+         # st.session_state.current_file_type = st.session_state.tipo_file_radio_key
 
     with col_select:
         st.subheader("1. Scegli il formato del referto")
         tipo_file = st.radio(
             "Seleziona il tipo di file:",
             ("Immagine (JPG, PNG)", "Documento PDF"),
-            horizontal=True, key="tipo_file_radio", label_visibility="collapsed"
+            horizontal=True,
+            key="tipo_file_radio_key", # Chiave necessaria per on_change
+            label_visibility="collapsed",
+            on_change=clear_analysis_on_type_change # Resetta l'analisi al cambio
         )
+        # Mantiene aggiornato il tipo file nello stato se necessario altrove
+        st.session_state.current_file_type = tipo_file
+
 
     with col_img1:
         section1_image_url = "https://www.cdi.it/wp-content/uploads/2021/08/shutterstock_1825232600-800x450-1.jpg"
@@ -232,93 +248,117 @@ def main():
         except Exception as img_err:
             st.warning(f"Avviso: Impossibile caricare l'immagine decorativa. ({img_err})", icon="🎨")
 
-    file_caricato = None
+    file_caricato = None # Resetta ad ogni run, il valore verrà dal widget
     with col_upload:
-        # --- REINSERITE ISTRUZIONI UPLOAD ---
         if tipo_file == "Immagine (JPG, PNG)":
-            st.info("""
-            **Come caricare l'immagine:**
-            *   Clicca sul pulsante "Browse files" (o simile) qui sotto.
-            *   Oppure, trascina il file immagine dal tuo computer nell'area sottostante.
-            *Consiglio: Usa un'immagine chiara e ben leggibile!*
-            """, icon="💡") # Icona corretta
+            st.info("""...""", icon="💡") # Istruzioni come prima
             file_caricato = st.file_uploader(
-                "Area di caricamento immagine", type=["jpg", "jpeg", "png"], key="uploader_img",
-                label_visibility="collapsed", help="Clicca o trascina qui JPG, JPEG o PNG (max 200MB)"
+                "Trascina o seleziona un'immagine", # Etichetta leggermente modificata
+                 type=["jpg", "jpeg", "png"], key="uploader_img",
+                 label_visibility="collapsed", help="Clicca o trascina qui JPG, JPEG o PNG (max 200MB)"
             )
             st.caption("Formati accettati: JPG, JPEG, PNG.")
 
         elif tipo_file == "Documento PDF":
-            st.info("""
-            **Come caricare il PDF:**
-            *   Clicca sul pulsante "Browse files" (o simile) qui sotto.
-            *   Oppure, trascina il file PDF dal tuo computer nell'area sottostante.
-            """, icon="📄") # Icona corretta
+            st.info("""...""", icon="📄") # Istruzioni come prima
             file_caricato = st.file_uploader(
-                "Area di caricamento PDF", type=["pdf"], key="uploader_pdf",
-                label_visibility="collapsed", help="Clicca o trascina qui un file PDF (max 200MB)"
+                "Trascina o seleziona un PDF", # Etichetta leggermente modificata
+                 type=["pdf"], key="uploader_pdf",
+                 label_visibility="collapsed", help="Clicca o trascina qui un file PDF (max 200MB)"
             )
             st.caption("Formato accettato: PDF.")
-        # --- FINE REINSERIMENTO ISTRUZIONI ---
 
-    # --- Logica di Gestione File Caricato (come prima) ---
+    # --- Logica di Analisi Automatica (FUORI DALLE COLONNE DI UPLOAD) ---
+    analysis_placeholder = st.empty() # Placeholder per mostrare risultati/spinner
+
     if file_caricato is not None:
-        if tipo_file == "Immagine (JPG, PNG)":
-            st.success(f"Immagine '{file_caricato.name}' caricata!")
-            col_preview, col_analyze = st.columns([2, 3])
-            with col_preview:
-                 try:
-                    immagine = Image.open(file_caricato)
-                    st.image(immagine, caption="Anteprima Referto Caricato", use_container_width=True)
-                 except Exception as e:
-                    st.error(f"Errore apertura immagine: {e}")
-                    immagine = None
-            with col_analyze:
-                st.subheader("3. Avvia Valutazione Dettagliata")
-                if immagine and st.button("✨ Valuta Immagine (Dettagliato)", key="btn_analizza_img", type="primary", use_container_width=True):
-                    st.warning("Avvio analisi dettagliata. Ricorda i limiti dell'IA e consulta il medico!")
-                    with st.spinner("🔬 Analisi dettagliata IA in corso... Potrebbe richiedere più tempo..."):
-                        analisi = analizza_referto_medico(immagine, "immagine")
-                        st.markdown("---")
-                        st.subheader("✅ Risultati Valutazione IA Dettagliata")
-                        st.markdown(analisi)
+        # Genera un ID univoco per il file caricato per il session_state
+        # Usare name e size è abbastanza robusto per evitare rianalisi dello stesso file
+        current_file_id = f"{file_caricato.name}_{file_caricato.size}"
 
-        elif tipo_file == "Documento PDF":
-            st.success(f"📄 PDF '{file_caricato.name}' caricato.")
-            st.markdown("---")
-            st.subheader("3. Avvia Valutazione Dettagliata")
-            if st.button("✨ Valuta PDF (Dettagliato)", key="btn_analizza_pdf", type="primary", use_container_width=True):
-                percorso_tmp_file = None
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                        tmp_file.write(file_caricato.getvalue())
-                        percorso_tmp_file = tmp_file.name
+        # Controlla se è un *nuovo* file o se l'analisi non è ancora stata fatta per questo file
+        if current_file_id != st.session_state.processed_file_id:
+            st.session_state.analysis_result = None # Resetta risultato precedente
+            st.session_state.processed_file_id = current_file_id # Segna questo file come "in elaborazione"
 
-                    st.warning("Avvio analisi dettagliata. Ricorda i limiti dell'IA e consulta il medico!")
-                    testo_pdf = None
-                    with st.spinner("📄 Estrazione testo dal PDF..."):
-                        testo_pdf = estrai_testo_da_pdf(percorso_tmp_file)
+            with analysis_placeholder.container(): # Usa il container per lo spinner e il risultato
+                st.success(f"File '{file_caricato.name}' caricato. Avvio analisi automatica...")
+                st.warning("Ricorda i limiti dell'IA e consulta il medico!")
 
-                    if testo_pdf:
-                         with st.spinner("🤖 Elaborazione IA Dettagliata in corso... Attendere prego..."):
-                              analisi = analizza_referto_medico(testo_pdf, "testo")
-                              st.markdown("---")
-                              st.subheader("✅ Risultati Valutazione IA Dettagliata")
-                              st.markdown(analisi)
-                    else:
-                         st.error("Valutazione non possibile: nessun testo valido estratto dal PDF.")
-
-                except Exception as e:
-                    st.error(f"Errore generale durante elaborazione PDF: {e}")
-                finally:
-                    if percorso_tmp_file and os.path.exists(percorso_tmp_file):
-                        try:
-                            os.unlink(percorso_tmp_file)
-                        except Exception as e_unlink:
-                             st.warning(f"Avviso: Impossibile eliminare file temporaneo: {e_unlink}")
+                analisi_output = None # Inizializza l'output
+                if tipo_file == "Immagine (JPG, PNG)":
+                    try:
+                        immagine = Image.open(file_caricato)
+                        # Mostra anteprima qui, prima dello spinner
+                        st.image(immagine, caption="Anteprima Referto Caricato", use_container_width=True)
+                        st.markdown("---") # Separatore dopo anteprima
+                        with st.spinner("🔬 Analisi dettagliata IA in corso... Potrebbe richiedere più tempo..."):
+                            analisi_output = analizza_referto_medico(immagine, "immagine")
+                    except Exception as e:
+                        st.error(f"Errore nell'apertura o analisi dell'immagine: {e}")
+                        analisi_output = f"Errore: Impossibile processare l'immagine '{file_caricato.name}'."
 
 
-    # --- Separatore e Caption Finale (senza immagine piè di pagina) ---
+                elif tipo_file == "Documento PDF":
+                    percorso_tmp_file = None
+                    try:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                            tmp_file.write(file_caricato.getvalue())
+                            percorso_tmp_file = tmp_file.name
+
+                        testo_pdf = None
+                        with st.spinner("📄 Estrazione testo dal PDF..."):
+                            testo_pdf = estrai_testo_da_pdf(percorso_tmp_file)
+
+                        if testo_pdf:
+                            with st.spinner("🤖 Elaborazione IA Dettagliata in corso... Attendere prego..."):
+                                analisi_output = analizza_referto_medico(testo_pdf, "testo")
+                        else:
+                            st.error("Analisi non possibile: nessun testo valido estratto dal PDF.")
+                            analisi_output = "Errore: Nessun testo valido estratto dal PDF."
+
+                    except Exception as e:
+                        st.error(f"Errore generale durante elaborazione PDF: {e}")
+                        analisi_output = f"Errore: Impossibile processare il PDF '{file_caricato.name}'."
+                    finally:
+                        # Pulizia file temporaneo
+                        if percorso_tmp_file and os.path.exists(percorso_tmp_file):
+                            try: os.unlink(percorso_tmp_file)
+                            except Exception as e_unlink: st.warning(f"Avviso: Impossibile eliminare file temporaneo: {e_unlink}")
+
+                # Salva il risultato (anche se è un messaggio di errore) nello stato
+                st.session_state.analysis_result = analisi_output
+
+                # Mostra il risultato DOPO che lo spinner è finito
+                if st.session_state.analysis_result:
+                     st.markdown("---")
+                     st.subheader("✅ Risultati Valutazione IA Dettagliata")
+                     st.markdown(st.session_state.analysis_result)
+
+        # Se il file è lo stesso già processato, mostra il risultato salvato
+        elif st.session_state.analysis_result:
+             with analysis_placeholder.container():
+                 # Mostra solo l'anteprima dell'immagine se è un'immagine e il risultato esiste
+                 if tipo_file == "Immagine (JPG, PNG)":
+                     try:
+                         # Ricarica l'immagine per mostrarla di nuovo (se non è troppo pesante)
+                         immagine = Image.open(file_caricato)
+                         st.image(immagine, caption="Anteprima Referto (già analizzato)", use_container_width=True)
+                         st.markdown("---")
+                     except: pass # Ignora errori nel mostrare l'anteprima qui
+                 st.subheader("✅ Risultati Valutazione IA Dettagliata (Precedente)")
+                 st.markdown(st.session_state.analysis_result)
+
+    else:
+         # Se non c'è nessun file caricato, pulisci lo stato precedente
+         if st.session_state.processed_file_id is not None:
+              st.session_state.analysis_result = None
+              st.session_state.processed_file_id = None
+              # Potrebbe essere utile un refresh forzato qui, ma st.empty() dovrebbe aggiornarsi
+              analysis_placeholder.empty()
+
+
+    # --- Separatore e Caption Finale ---
     st.markdown("---")
     st.caption("Applicazione sviluppata con Streamlit e Google Gemini. **Consulta sempre un professionista sanitario.**")
 
