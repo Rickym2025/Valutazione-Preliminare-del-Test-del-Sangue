@@ -8,105 +8,111 @@ from google.api_core import exceptions
 from dotenv import load_dotenv
 import time
 
+# Carica le variabili d'ambiente
 load_dotenv()
 
-# Configure the Gemini AI model
+# Configura il modello Gemini AI
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    st.error("Gemini API key not found. Please set the GEMINI_API_KEY environment variable.")
+    st.error("Chiave API Gemini non trovata. Per favore, imposta la variabile d'ambiente GEMINI_API_KEY.")
     st.stop()
 
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 MAX_RETRIES = 3
-RETRY_DELAY = 2  # seconds
+RETRY_DELAY = 2  # secondi
 
-def analyze_medical_report(content, content_type):
-    prompt = "Analyze this medical report concisely. Provide key findings, diagnoses, and recommendations:"
+def analizza_referto_medico(contenuto, tipo_contenuto):
+    prompt = "Analizza questo referto medico in modo conciso. Fornisci i principali risultati, diagnosi e raccomandazioni:"
     
-    for attempt in range(MAX_RETRIES):
+    for tentativo in range(MAX_RETRIES):
         try:
-            if content_type == "image":
-                response = model.generate_content([prompt, content])
-            else:  # text
-                # Gemini 1.5 Flash can handle larger inputs, so we'll send the full text
-                response = model.generate_content(f"{prompt}\n\n{content}")
+            if tipo_contenuto == "immagine":
+                risposta = model.generate_content([prompt, contenuto])
+            else:  # testo
+                risposta = model.generate_content(f"{prompt}\n\n{contenuto}")
             
-            return response.text
+            # Aggiungi suggerimenti generali
+            suggerimenti = "\n\nSuggerimenti:\n- Verifica la diagnosi con uno specialista.\n- Assicurati di seguire le raccomandazioni riportate nel referto."
+            return risposta.text + suggerimenti
         except exceptions.GoogleAPIError as e:
-            if attempt < MAX_RETRIES - 1:
-                st.warning(f"An error occurred. Retrying in {RETRY_DELAY} seconds... (Attempt {attempt + 1}/{MAX_RETRIES})")
+            if tentativo < MAX_RETRIES - 1:
+                st.warning(f"Si è verificato un errore. Nuovo tentativo tra {RETRY_DELAY} secondi... (Tentativo {tentativo + 1}/{MAX_RETRIES})")
                 time.sleep(RETRY_DELAY)
             else:
-                st.error(f"Failed to analyze the report after {MAX_RETRIES} attempts. Error: {str(e)}")
-                return fallback_analysis(content, content_type)
+                st.error(f"Impossibile analizzare il referto dopo {MAX_RETRIES} tentativi. Errore: {str(e)}")
+                return analisi_fallback(contenuto, tipo_contenuto)
 
-def fallback_analysis(content, content_type):
-    st.warning("Using fallback analysis method due to API issues.")
-    if content_type == "image":
-        return "Unable to analyze the image due to API issues. Please try again later or consult a medical professional for accurate interpretation."
-    else:  # text
-        word_count = len(content.split())
-        return f"""
-        Fallback Analysis:
-        1. Document Type: Text-based medical report
-        2. Word Count: Approximately {word_count} words
-        3. Content: The document appears to contain medical information, but detailed analysis is unavailable due to technical issues.
-        4. Recommendation: Please review the document manually or consult with a healthcare professional for accurate interpretation.
-        5. Note: This is a simplified analysis due to temporary unavailability of the AI service. For a comprehensive analysis, please try again later.
+def analisi_fallback(contenuto, tipo_contenuto):
+    st.warning("Utilizzo del metodo di analisi di fallback a causa di problemi con l'API.")
+    if tipo_contenuto == "immagine":
+        analisi = "Impossibile analizzare l'immagine a causa di problemi con l'API. Prova di nuovo più tardi o consulta un professionista medico per un'interpretazione accurata."
+    else:  # testo
+        numero_parole = len(contenuto.split())
+        analisi = f"""
+        Analisi di fallback:
+        1. Tipo di documento: Referto medico basato su testo
+        2. Numero di parole: Circa {numero_parole} parole
+        3. Contenuto: Il documento sembra contenere informazioni mediche, ma l'analisi dettagliata non è disponibile a causa di problemi tecnici.
+        4. Raccomandazione: Rivedi il documento manualmente o consulta un professionista sanitario per un'interpretazione accurata.
+        5. Nota: Questa è un'analisi semplificata a causa dell'indisponibilità temporanea del servizio AI. Per un'analisi completa, prova di nuovo più tardi.
         """
+    
+    # Aggiungi suggerimenti di fallback
+    suggerimenti = "\n\nSuggerimenti di fallback:\n- In caso di dubbio, consulta il tuo medico.\n- Se non sei sicuro della diagnosi, chiedi una seconda opinione."
+    return analisi + suggerimenti
 
-def extract_text_from_pdf(pdf_file):
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+def estrai_testo_da_pdf(pdf_file):
+    lettore_pdf = PyPDF2.PdfReader(pdf_file)
+    testo = ""
+    for pagina in lettore_pdf.pages:
+        testo += pagina.extract_text()
+    return testo
 
 def main():
-    st.title("AI-driven Medical Report Analyzer")
-    st.write("Upload a medical report (image or PDF) for analysis")
+    st.title("Analizzatore di Referti Medici Basato su IA")
+    st.write("Carica un referto medico (immagine o PDF) per l'analisi")
 
-    file_type = st.radio("Select file type:", ("Image", "PDF"))
+    tipo_file = st.radio("Seleziona il tipo di file:", ("Immagine", "PDF"))
 
-    if file_type == "Image":
-        uploaded_file = st.file_uploader("Choose a medical report image", type=["jpg", "jpeg", "png"])
-        if uploaded_file is not None:
+    if tipo_file == "Immagine":
+        file_caricato = st.file_uploader("Scegli un'immagine del referto medico", type=["jpg", "jpeg", "png"])
+        if file_caricato is not None:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                tmp_file_path = tmp_file.name
+                tmp_file.write(file_caricato.getvalue())
+                percorso_tmp_file = tmp_file.name
 
-            image = Image.open(tmp_file_path)
-            st.image(image, caption="Uploaded Medical Report", use_column_width=True)
+            immagine = Image.open(percorso_tmp_file)
+            st.image(immagine, caption="Referto Medico Caricato", use_container_width=True)
 
-            if st.button("Analyze Image Report"):
-                with st.spinner("Analyzing the medical report image..."):
-                    analysis = analyze_medical_report(image, "image")
-                    st.subheader("Analysis Results:")
-                    st.write(analysis)
+            if st.button("Analizza il Referto dell'Immagine"):
+                with st.spinner("Analizzando il referto medico..."):
+                    analisi = analizza_referto_medico(immagine, "immagine")
+                    st.subheader("Risultati dell'Analisi:")
+                    st.write(analisi)
 
-            os.unlink(tmp_file_path)
+            os.unlink(percorso_tmp_file)
 
     else:  # PDF
-        uploaded_file = st.file_uploader("Choose a medical report PDF", type=["pdf"])
-        if uploaded_file is not None:
-            st.write("PDF uploaded successfully")
+        file_caricato = st.file_uploader("Scegli un referto medico in formato PDF", type=["pdf"])
+        if file_caricato is not None:
+            st.write("PDF caricato con successo")
 
-            if st.button("Analyze PDF Report"):
-                with st.spinner("Analyzing the medical report PDF..."):
+            if st.button("Analizza il Referto del PDF"):
+                with st.spinner("Analizzando il referto medico..."):
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                        tmp_file.write(uploaded_file.getvalue())
-                        tmp_file_path = tmp_file.name
+                        tmp_file.write(file_caricato.getvalue())
+                        percorso_tmp_file = tmp_file.name
 
-                    with open(tmp_file_path, 'rb') as pdf_file:
-                        pdf_text = extract_text_from_pdf(pdf_file)
+                    with open(percorso_tmp_file, 'rb') as pdf_file:
+                        testo_pdf = estrai_testo_da_pdf(pdf_file)
 
-                    analysis = analyze_medical_report(pdf_text, "text")
-                    st.subheader("Analysis Results:")
-                    st.write(analysis)
+                    analisi = analizza_referto_medico(testo_pdf, "testo")
+                    st.subheader("Risultati dell'Analisi:")
+                    st.write(analisi)
 
-                    os.unlink(tmp_file_path)
+                    os.unlink(percorso_tmp_file)
 
 if __name__ == "__main__":
     main()
