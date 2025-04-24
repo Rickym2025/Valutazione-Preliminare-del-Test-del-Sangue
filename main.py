@@ -5,16 +5,12 @@ import PyPDF2
 import tempfile
 import os
 from google.api_core import exceptions
-from dotenv import load_dotenv
 import time
 
-# Carica le variabili d'ambiente
-load_dotenv()
-
-# Configura il modello Gemini AI
-api_key = os.getenv("GEMINI_API_KEY")
+# Configura il modello Gemini AI utilizzando la chiave API da Streamlit Secrets
+api_key = st.secrets["GEMINI_API_KEY"]  # Usa il nome della variabile dal tuo secret
 if not api_key:
-    st.error("Chiave API Gemini non trovata. Per favore, imposta la variabile d'ambiente GEMINI_API_KEY.")
+    st.error("Chiave API Gemini non trovata. Per favore, imposta la variabile d'ambiente GEMINI_API_KEY nei secrets di Streamlit.")
     st.stop()
 
 genai.configure(api_key=api_key)
